@@ -1,0 +1,5 @@
+{
+  "name": "Gestione File Excel Produzione",
+  "description": "A professional web application designed to process Excel files by replicating a specific VBA macro logic, including row deletion, styling, and custom naming conventions.",
+  "requestFramePermissions": []
+}
