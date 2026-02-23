@@ -27,6 +27,9 @@ export const processExcelFile = async (file: File, options: ProcessingOptions): 
       worksheet.spliceRows(1, 1);
     }
 
+    // 1b. Eliminazione colonne M, N, O, P, Q, R, S (indici 13-19)
+    worksheet.spliceColumns(13, 7);
+
     // 2. Definizione intestazioni specifiche (nuova riga 1)
     worksheet.getCell('E1').value = 'Codice';
     worksheet.getCell('F1').value = 'Configurazione';
