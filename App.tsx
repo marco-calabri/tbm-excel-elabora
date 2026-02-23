@@ -2,12 +2,14 @@
 import React, { useState, useEffect } from 'react';
 import { Upload, FileText, Download, CheckCircle, AlertCircle, Loader2, Info, Edit3 } from 'lucide-react';
 import { FileSuffix, ProcessingOptions } from './types';
-import { processExcelFile } from './services/excelService';
+import { processExcelFile, getExcelPreview } from './services/excelService';
 
 const App: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
   const [baseNameInput, setBaseNameInput] = useState('');
   const [selectedSuffix, setSelectedSuffix] = useState<FileSuffix>(FileSuffix.PRT);
+  const [deleteFirstRow, setDeleteFirstRow] = useState(false);
+  const [previewData, setPreviewData] = useState<any[][]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [status, setStatus] = useState<{ type: 'success' | 'error' | null; message: string }>({
     type: null,
@@ -15,7 +17,7 @@ const App: React.FC = () => {
   });
 
   // Aggiorna il nome base quando viene caricato un file
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
       
@@ -35,8 +37,18 @@ const App: React.FC = () => {
         }
         
         setStatus({ type: null, message: '' });
+
+        // Carica anteprima
+        try {
+          const { data, isFirstRowEmpty } = await getExcelPreview(selectedFile);
+          setPreviewData(data);
+          setDeleteFirstRow(isFirstRowEmpty);
+        } catch (err) {
+          console.error("Errore anteprima:", err);
+        }
       } else {
         setFile(null);
+        setPreviewData([]);
         setStatus({ 
           type: 'error', 
           message: 'Formato non supportato. Per favore carica un file .xlsx' 
@@ -57,7 +69,8 @@ const App: React.FC = () => {
     try {
       const options: ProcessingOptions = {
         baseFileName: baseNameInput,
-        suffix: selectedSuffix
+        suffix: selectedSuffix,
+        deleteFirstRow: deleteFirstRow
       };
       await processExcelFile(file, options);
       setStatus({ type: 'success', message: `File "${baseNameInput}_${selectedSuffix}.xlsx" scaricato con successo!` });
@@ -151,6 +164,72 @@ const App: React.FC = () => {
                 STR_COMPILATO
               </button>
             </div>
+          </div>
+
+          {/* Opzione Eliminazione Riga */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200">
+              <div className="space-y-0.5">
+                <p className="text-xs font-bold text-slate-700 uppercase tracking-tight">Elimina prima riga</p>
+                <p className="text-[10px] text-slate-500">Rimuove l'intestazione originale del file caricato</p>
+              </div>
+              <button
+                onClick={() => setDeleteFirstRow(!deleteFirstRow)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                  deleteFirstRow ? 'bg-blue-600' : 'bg-slate-300'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    deleteFirstRow ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* Anteprima Tabella */}
+            {previewData.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <Info className="w-3 h-3 text-slate-400" />
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Anteprima (Col C-G, prime 5 righe)</p>
+                </div>
+                <div className="overflow-hidden border border-slate-200 rounded-xl bg-white">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-slate-50 border-bottom border-slate-200">
+                          {['C', 'D', 'E', 'F', 'G'].map(col => (
+                            <th key={col} className="px-3 py-2 text-[10px] font-bold text-slate-400 border-r border-slate-200 last:border-r-0">
+                              Col {col}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {previewData.map((row, rowIndex) => (
+                          <tr 
+                            key={rowIndex} 
+                            className={`border-b border-slate-100 last:border-b-0 ${
+                              rowIndex === 0 && deleteFirstRow ? 'bg-red-50 opacity-50' : ''
+                            }`}
+                          >
+                            {row.map((cell, cellIndex) => (
+                              <td key={cellIndex} className="px-3 py-1.5 text-[10px] font-mono text-slate-600 border-r border-slate-100 last:border-r-0 truncate max-w-[120px]">
+                                {cell}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                {deleteFirstRow && (
+                  <p className="text-[9px] text-red-500 font-medium italic">* La riga evidenziata in rosso verrà eliminata</p>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Preview Nome */}

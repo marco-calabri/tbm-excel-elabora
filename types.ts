@@ -7,6 +7,7 @@ export enum FileSuffix {
 export interface ProcessingOptions {
   baseFileName: string;
   suffix: FileSuffix;
+  deleteFirstRow: boolean;
 }
 
 export interface ProcessingResult {

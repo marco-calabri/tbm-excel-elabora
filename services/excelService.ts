@@ -22,8 +22,10 @@ export const processExcelFile = async (file: File, options: ProcessingOptions): 
   }
 
   workbook.worksheets.forEach((worksheet) => {
-    // 1. Eliminazione riga 1 originale (come da Macro: Rows("1:1").Delete)
-    worksheet.spliceRows(1, 1);
+    // 1. Eliminazione riga 1 originale (se richiesto)
+    if (options.deleteFirstRow) {
+      worksheet.spliceRows(1, 1);
+    }
 
     // 2. Definizione intestazioni specifiche (nuova riga 1)
     worksheet.getCell('E1').value = 'Codice';
@@ -123,4 +125,34 @@ export const processExcelFile = async (file: File, options: ProcessingOptions): 
   const finalFileName = `${options.baseFileName}_${options.suffix}.xlsx`;
   
   FileSaver.saveAs(blob, finalFileName);
+};
+
+export const getExcelPreview = async (file: File): Promise<{ data: any[][], isFirstRowEmpty: boolean }> => {
+  const workbook = new ExcelJS.Workbook();
+  const arrayBuffer = await file.arrayBuffer();
+  await workbook.xlsx.load(arrayBuffer);
+  
+  const worksheet = workbook.worksheets[0];
+  const previewData: any[][] = [];
+  
+  // Controlla se la prima riga è effettivamente vuota (nessun valore in nessuna cella)
+  const firstRow = worksheet.getRow(1);
+  let isFirstRowEmpty = true;
+  firstRow.eachCell({ includeEmpty: false }, () => {
+    isFirstRowEmpty = false;
+  });
+
+  // Colonne C, D, E, F, G sono 3, 4, 5, 6, 7
+  const targetCols = [3, 4, 5, 6, 7];
+  
+  for (let i = 1; i <= Math.min(worksheet.rowCount, 6); i++) {
+    const row = worksheet.getRow(i);
+    const rowData = targetCols.map(colIndex => {
+      const cell = row.getCell(colIndex);
+      return cell.value?.toString() || '';
+    });
+    previewData.push(rowData);
+  }
+  
+  return { data: previewData, isFirstRowEmpty };
 };
