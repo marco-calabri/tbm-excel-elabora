@@ -133,6 +133,9 @@ export const getExcelPreview = async (file: File): Promise<{ data: any[][], isFi
   await workbook.xlsx.load(arrayBuffer);
   
   const worksheet = workbook.worksheets[0];
+  if (!worksheet) {
+    return { data: [], isFirstRowEmpty: false };
+  }
   const previewData: any[][] = [];
   
   // Controlla se la prima riga è effettivamente vuota (nessun valore in nessuna cella)
